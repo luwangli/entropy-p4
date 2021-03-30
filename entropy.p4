@@ -16,7 +16,7 @@ header ethernet_t {
 
 header ipv4_t {
     bit<4> version;
-    bit<4> inl;
+    bit<4> ihl;
     bit<8> diffserv;
     bit<16> totallen;
     bit<16> identification;
@@ -42,7 +42,7 @@ struct metadata {
 parser MyParser(packet_in packet,
                 out headers hdr,
                 inout metadata meta,
-                inout standard_metadata standard_metadata) {
+                inout standard_metadata_t standard_metadata) {
 
     state start {
         transition parse_ethernet;
@@ -64,8 +64,7 @@ parser MyParser(packet_in packet,
 
 /*************************CHECKSUM************************/
 control MyVerifyChecksum(inout headers hdr,
-                        inout metadata meta,
-                        inout standard_metadata_t standard_metadata) {
+                        inout metadata meta) {
     apply{}
 }
 
@@ -100,7 +99,7 @@ control MyIngress (inout headers hdr,
 
     apply {
         if(hdr.ipv4.isValid()) {
-            ipv4.lpm.apply();
+            ipv4_lpm.apply();
         }
     }
 }
@@ -140,8 +139,9 @@ control MyDeparser(packet_out packet, in headers hdr) {
     }
 }
 
-/****SWITCH****/
-V1SWITCH(
+
+/*******SWITCH****/
+V1Switch(
 MyParser(),
 MyVerifyChecksum(),
 MyIngress(),
