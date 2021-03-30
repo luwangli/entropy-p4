@@ -1,22 +1,23 @@
 {
-    "hosts": [
-	"h1",
-	"h2",
-	"h4",
-	"h99"
-    ],
+    "hosts": {
+		"h1": {
+			"ip": "10.0.1.1/24",
+			"mac": "08:00:00:00:01:11"
+		},
+		"h2": {
+			"ip": "10.0.2.2/24",
+			"mac": "08:00:00:00:02:22"
+		},
+		"h3": {
+			"ip": "10.0.3.3/24",
+			"mac": "08:00:00:00:03:33"
+		}
+	},
     "switches": {
-	"s11": { "runtime_json" : "./sw_rules/s11-runtime.json","cli_input" : "./sw_rules/s11-cli.input" },
-	"s21": { "runtime_json" : "./sw_rules/s21-runtime.json","cli_input" : "./sw_rules/s21-cli.input" },
-	"s31": { "runtime_json" : "./sw_rules/s31-runtime.json","cli_input" : "./sw_rules/s31-cli.input" },
-	"s41": { "runtime_json" : "./sw_rules/s41-runtime.json","cli_input" : "./sw_rules/s41-cli.input" },
-	"s51": { "runtime_json" : "./sw_rules/s51-runtime.json","cli_input" : "./sw_rules/s51-cli.input" }
+	"s11": { "runtime_json" : "./sw_rules/s11-runtime.json" }
     },
     "links": [
-	["h1", "s11"],["s11", "s31"],
-	["h2", "s21"],["s21", "s31"],
-	["s31", "s51"],
-	["h4", "s41"],["s41", "s51"],
-	["h99", "s51"]
+	["h1", "s11"],["h3", "s11"],
+	["h2", "s11"]
     ]
 }
