@@ -85,25 +85,32 @@ control MyIngress (inout headers hdr,
 
     //observation windows parameters
   //  register<bit<5>> log2_m;
-    register<bit<8>>(1) log2_m;
+    register<bit<8>>(1) R_log2_m;
+
+    //observation window control parameters
+    register<bit<32>>(1) R_ow_counter;
+    register<bit<32>>(1) R_pkt_counter;
+
     // filter struct
-    register<bit<32>>(FILTER_WIDTH) src_filter;
-    //windows annotation in filter
-    register<bit<8>>(FILTER_WIDTH) src_filter_wa;
+    register<bit<32>>(FILTER_WIDTH) R_src_filter_key;
+    register<bit<32>>(FILTER_WIDTH) R_src_filter_count;
+    register<bit<32>>(FILTER_WIDTH) R_src_filter_vote;//initial value is 0; if reset, then 16
+    //observation windows annotation in filter
+    register<bit<8>>(FILTER_WIDTH) R_src_filter_ow;
 
     // count min sketch; 2^12 = 4096 in every counter
-    register<bit<12>>(CM_WIDTH) src_cm1;
-    register<bit<12>>(CM_WIDTH) src_cm2;
-    register<bit<12>>(CM_WIDTH) src_cm3;
-    register<bit<12>>(CM_WIDTH) src_cm4;
-    //window annotation in count min sketch;
-    register<bit<8>>(CM_WIDTH) src_cm1_wa;
-    register<bit<8>>(CM_WIDTH) src_cm2_wa;
-    register<bit<8>>(CM_WIDTH) src_cm3_wa;
-    register<bit<8>>(CM_WIDTH) src_cm4_wa;
+    register<bit<12>>(CM_WIDTH) R_src_cm1_count;
+    register<bit<12>>(CM_WIDTH) R_src_cm2_count;
+    register<bit<12>>(CM_WIDTH) R_src_cm3_count;
+    register<bit<12>>(CM_WIDTH) R_src_cm4_count;
+    //observation window annotation in count min sketch;
+    register<bit<8>>(CM_WIDTH) R_src_cm1_ow;
+    register<bit<8>>(CM_WIDTH) R_src_cm2_ow;
+    register<bit<8>>(CM_WIDTH) R_src_cm3_ow;
+    register<bit<8>>(CM_WIDTH) R_src_cm4_ow;
 
     //entropy
-    register<bit<32>>(1) src_S;
+    register<bit<32>>(1) R_src_entropy;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -161,9 +168,90 @@ control MyIngress (inout headers hdr,
             y = x4;
     }
 
+    action filter_hash(in bit<32> ipv4_addr, out bit<32> h) {
+        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w0xffffffff);
+    }
+
     apply {
         if(hdr.ipv4.isValid()) {
-            ipv4_lpm.apply();
+            bit<32> current_ow;
+            R_ow_counter.read(current_ow,0);
+
+            bit<32> src_filter_h;
+            filter_hash(hdr.ipv4.src_addr, src_filter_h);
+
+            bit<8> src_filter_ow_aux;
+            R_src_filter_ow.read(src_filter_ow_aux, src_filter_h);
+
+            /************************layer 1: filter **********************************************/
+            bit<32> src_filter_count;
+            bit<32> src_filter_vote;
+            bit<32> src_filter_key;
+            //if observation windows in filter is not equal to current windows; update filter structure
+            //else, read correspongding register
+            if(src_filter_ow_aux != current_ow[7:0]) {
+                src_filter_count = 0;
+                src_filter_vote = 0;
+                R_src_filter_ow.write(src_filter_h, current_ow[7:0]);//update observation windows
+            } else {
+                R_src_filter_key.read(src_filter_key,src_filter_h);
+                R_src_filter_count.read(src_filter_count,src_filter_h);
+                R_src_filter_vote.read(src_filter_vote,src_filter_h);
+            }
+
+            if( src_filter_vote == 0 && src_filter_count == 0) {
+            //case 1: start of a new observation windows
+                src_filter_key = hdr.ipv4.src_addr;
+                src_filter_count = src_filter_count +1;
+                src_filter_vote = src_filter_vote + 1;
+            } else if(src_filter_vote >0 && src_filter_key == hdr.ipv4.src_addr) {
+            //case 2: incoming packet is belong to the flow in filter layer
+                src_filter_count = src_filter_count + 1;
+                src_filter_vote = src_filter_vote + 1;
+            } else {
+            /***************************layer2 : Count Min Sketch****************************/
+                bit<32> src_cm1_h;
+                bit<32> src_cm2_h;
+                bit<32> src_cm3_h;
+                bit<32> src_cm4_h;
+                bit<12> src_cm1_count;
+                bit<12> src_cm2_count;
+                bit<12> src_cm3_count;
+                bit<12> src_cm4_count;
+                cm_hash(hdr.ipv4.src_addr, src_cm1_h, src_cm2_h, src_cm3_h, src_cm4_h);
+
+                //estimation in row 1
+                bit<8> src_cm1_ow_aux;
+                R_src_cm1_ow.read(src_cm1_ow_aux,src_cm1_h);
+                if(src_cm1_ow_aux != current_ow[7:0]) {
+                    src_cm1_count = 0;
+                    R_src_cm1_ow.write(src_cm1_h, current_ow[7:0]);
+                } else {
+                    R_src_cm1_count.read(src_cm1_count, src_cm1_h);//不一定是加1
+                }
+
+                //estimation in row 2
+                bit<8> src_cm2_ow_aux;
+                R_src_cm2_ow.read(src_cm2_ow_aux,src_cm2_h);
+                if(src_cm2_ow_aux != current_ow[7:0]) {
+                    src_cm2_count = 0;
+                    R_src_cm2_ow.write(src_cm2_h, current_ow[7:0]);
+                } else {
+                    R_src_cm2_count.read(src_cm2_count, src_cm2_h);//不一定是加1
+                }
+
+                //estimation in row 3
+                bit<8> src_cm3_ow_aux;
+                R_src_cm3_ow.read(src_cm1_ow_aux,src_cm1_h);
+                if(src_cm1_ow_aux != current_ow[7:0]) {
+                    src_cm1_count = 0;
+                    R_src_cm1_ow.write(src_cm1_h, current_ow[7:0]);
+                } else {
+                    R_src_cm1_count.read(src_cm1_count, src_cm1_h);//不一定是加1
+                }
+
+
+
         }
     }
 }
