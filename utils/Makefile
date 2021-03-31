@@ -1,6 +1,7 @@
 BUILD_DIR = build
 PCAP_DIR = pcaps
 LOG_DIR = logs
+#SOURCE_DIR = src
 
 TOPO = topology.json
 P4C = p4c-bm2-ss
