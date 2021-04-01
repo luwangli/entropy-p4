@@ -4,9 +4,9 @@
 //when debug, set FILTER_WIDTH as 2, ser RESET_VOTE as 2
 //#define FILTER_WIDTH 64
 //#define RESET_VOTE 16
-#define FILTER_WIDTH 2
+#define FILTER_WIDTH 64
 #define CM_WIDTH 2048
-#define RESET_VOTE 2
+#define RESET_VOTE 16
 #define NOTE_SESSION 250
 
 /***************************************HEADER**************************/
@@ -220,7 +220,7 @@ control MyIngress (inout headers hdr,
 
     //in filter layer, there is 64 <FILTER WIDTH>
     action filter_hash(in bit<32> ipv4_addr, out bit<32> h) {
-        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w2);//hash<O,T,D,M> T is the base, M is max value
+        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w64);//hash<O,T,D,M> T is the base, M is max value
     }
 
     apply {
