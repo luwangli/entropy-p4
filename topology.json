@@ -14,7 +14,7 @@
 		}
 	},
     "switches": {
-	"s11": { "runtime_json" : "./sw_rules/s11-runtime.json" }
+	"s11": { "runtime_json" : "./sw_rules/s11-runtime.json","cli_input" : "./sw_rules/s11-cli.input" }
     },
     "links": [
 	["h1", "s11"],["h3", "s11"],

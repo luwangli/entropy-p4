@@ -154,10 +154,10 @@ control MyIngress (inout headers hdr,
     }
 
     action cm_hash(in bit<32> ipv4_addr, out bit<32> h1, out bit<32> h2, out bit<32> h3, out bit<32> h4) {
-        hash(h1, HashAlgorithm.h1, 32w0, {ipv4_addr}, 32w0xffffffff);
-        hash(h2, HashAlgorithm.h2, 32w0, {ipv4_addr}, 32w0xffffffff);
-        hash(h3, HashAlgorithm.h3, 32w0, {ipv4_addr}, 32w0xffffffff);
-        hash(h4, HashAlgorithm.h4, 32w0, {ipv4_addr}, 32w0xffffffff);
+        hash(h1, HashAlgorithm.h1, 32w0, {ipv4_addr}, 32w2048);
+        hash(h2, HashAlgorithm.h2, 32w0, {ipv4_addr}, 32w2048);
+        hash(h3, HashAlgorithm.h3, 32w0, {ipv4_addr}, 32w2048);
+        hash(h4, HashAlgorithm.h4, 32w0, {ipv4_addr}, 32w2048);
     }
 
     action countmin(in bit<12> x1, in bit<12> x2, in bit<12> x3, in bit<12> x4, out bit<32> y) {
@@ -215,9 +215,9 @@ control MyIngress (inout headers hdr,
 
     }
 
-
+    //in filter layer, there is 64 <FILTER WIDTH>
     action filter_hash(in bit<32> ipv4_addr, out bit<32> h) {
-        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w0xffffffff);
+        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w64);//hash<O,T,D,M> T is the base, M is max value
     }
 
     apply {
@@ -394,7 +394,8 @@ control MyIngress (inout headers hdr,
                     }
                     /**************************************************************************/
 
-                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.evict_ip_count);
+        //           countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.evict_ip_count);
+                   meta.evict_ip_count = src_filter_count;
                    src_cm1_count = src_cm1_count + (bit<12>) meta.evict_ip_count;
                    src_cm2_count = src_cm2_count + (bit<12>) meta.evict_ip_count;
                    src_cm3_count = src_cm3_count + (bit<12>) meta.evict_ip_count;
