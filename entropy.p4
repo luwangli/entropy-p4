@@ -43,6 +43,7 @@ struct metadata {
     bit<32> ip_count;//number of this ip, to caculate entropy
     bit<32> entropy_term;// the item entropy
     bit<32> src_entropy;
+    bit<32> evict_ip_count;
 
 
 }
@@ -157,16 +158,61 @@ control MyIngress (inout headers hdr,
         hash(h4, HashAlgorithm.h4, 32w0, {ipv4_addr}, 32w0xffffffff);
     }
 
-    action countmin(in bit<32> x1, in bit<32> x2, in bit<32> x3, in bit<32> x4, out bit<32> y) {
+    action countmin(in bit<12> x1, in bit<12> x2, in bit<12> x3, in bit<12> x4, out bit<32> y) {
         if (x1 <= x2 && x1 <= x3 && x1 <= x4)
-            y = x1;
+            y = (bit<32>) x1;
         else if (x2<= x1 && x2<=x3 && x2 <= x4)
-            y = x2;
+            y = (bit<32>) x2;
         else if (x3<= x1 && x3<= x2 && x3 <= x4)
-            y = x3;
+            y = (bit<32>) x3;
         else
-            y = x4;
+            y = (bit<32>) x4;
     }
+
+    action get_minvalue_cm(in bit<32> h1, inout bit<12> count1, in bit<32> h2,
+                            inout bit<12> count2, in bit<32> h3, inout bit<12> count3,
+                            in bit<32> h4,inout bit<12> count4, in bit<32> current_ow) {
+    //estimation in row 1
+        bit<8> src_cm1_ow_aux;
+        R_src_cm1_ow.read(src_cm1_ow_aux,h1);
+        if(src_cm1_ow_aux != current_ow[7:0]) {
+            count1 = 0;
+            R_src_cm1_ow.write(h1, current_ow[7:0]);
+        } else {
+            R_src_cm1_count.read(count1, h1);//不一定是加1
+        }
+
+         //estimation in row 2
+        bit<8> src_cm2_ow_aux;
+        R_src_cm2_ow.read(src_cm2_ow_aux,h2);
+        if(src_cm2_ow_aux != current_ow[7:0]) {
+            count2 = 0;
+            R_src_cm2_ow.write(h2, current_ow[7:0]);
+        } else {
+            R_src_cm2_count.read(count2, h2);//不一定是加1
+        }
+        //estimation in row 3
+        bit<8> src_cm3_ow_aux;
+        R_src_cm3_ow.read(src_cm3_ow_aux,h3);
+        if(src_cm3_ow_aux != current_ow[7:0]) {
+            count3 = 0;
+            R_src_cm3_ow.write(h3, current_ow[7:0]);
+        } else {
+            R_src_cm3_count.read(count3, h3);//不一定是加1
+        }
+        //estimation in row 4
+        bit<8> src_cm4_ow_aux;
+        R_src_cm4_ow.read(src_cm4_ow_aux,h4);
+        if(src_cm4_ow_aux != current_ow[7:0]) {
+            count4 = 0;
+            R_src_cm4_ow.write(h4, current_ow[7:0]);
+        } else {
+            R_src_cm4_count.read(count4, h4);//不一定是加1
+        }
+
+
+    }
+
 
     action filter_hash(in bit<32> ipv4_addr, out bit<32> h) {
         hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w0xffffffff);
@@ -178,7 +224,7 @@ control MyIngress (inout headers hdr,
             R_ow_counter.read(current_ow,0);
 
             bit<32> src_filter_h;
-            filter_hash(hdr.ipv4.src_addr, src_filter_h);
+            filter_hash(hdr.ipv4.srcAddr, src_filter_h);
 
             bit<8> src_filter_ow_aux;
             R_src_filter_ow.read(src_filter_ow_aux, src_filter_h);
@@ -199,16 +245,19 @@ control MyIngress (inout headers hdr,
                 R_src_filter_vote.read(src_filter_vote,src_filter_h);
             }
 
-            if( src_filter_vote == 0 && src_filter_count == 0) {
+            if(src_filter_count == 0) {
             //case 1: start of a new observation windows
-                src_filter_key = hdr.ipv4.src_addr;
+                src_filter_key = hdr.ipv4.srcAddr;
                 src_filter_count = src_filter_count +1;
                 src_filter_vote = src_filter_vote + 1;
-            } else if(src_filter_vote >0 && src_filter_key == hdr.ipv4.src_addr) {
-            //case 2: incoming packet is belong to the flow in filter layer
+                meta.ip_count = src_filter_count;
+            } else if( src_filter_key == hdr.ipv4.srcAddr) {
+                //case 2: incoming packet is belong to the flow in filter layer
                 src_filter_count = src_filter_count + 1;
                 src_filter_vote = src_filter_vote + 1;
+                meta.ip_count = src_filter_count;
             } else {
+            //incoming packet don't belong to the flow in filter layer
             /***************************layer2 : Count Min Sketch****************************/
                 bit<32> src_cm1_h;
                 bit<32> src_cm2_h;
@@ -218,17 +267,19 @@ control MyIngress (inout headers hdr,
                 bit<12> src_cm2_count;
                 bit<12> src_cm3_count;
                 bit<12> src_cm4_count;
-                cm_hash(hdr.ipv4.src_addr, src_cm1_h, src_cm2_h, src_cm3_h, src_cm4_h);
+                cm_hash(hdr.ipv4.srcAddr, src_cm1_h, src_cm2_h, src_cm3_h, src_cm4_h);
+                //get_minvalue_cm(src_cm1_h, src_cm1_count,src_cm2_h,src_cm2_count,src_cm3_h,src_cm3_count,src_cm4_h,src_cm4_count,current_ow);
 
-                //estimation in row 1
+                /*************************************************************************/
+                //conditional exception in action is not supported :(  https://github.com/p4lang/p4c/issues/644
                 bit<8> src_cm1_ow_aux;
                 R_src_cm1_ow.read(src_cm1_ow_aux,src_cm1_h);
                 if(src_cm1_ow_aux != current_ow[7:0]) {
                     src_cm1_count = 0;
                     R_src_cm1_ow.write(src_cm1_h, current_ow[7:0]);
                 } else {
-                    R_src_cm1_count.read(src_cm1_count, src_cm1_h);//不一定是加1
-                }
+                 R_src_cm1_count.read(src_cm1_count, src_cm1_h);//不一定是加1
+                 }
 
                 //estimation in row 2
                 bit<8> src_cm2_ow_aux;
@@ -239,19 +290,123 @@ control MyIngress (inout headers hdr,
                 } else {
                     R_src_cm2_count.read(src_cm2_count, src_cm2_h);//不一定是加1
                 }
-
                 //estimation in row 3
                 bit<8> src_cm3_ow_aux;
-                R_src_cm3_ow.read(src_cm1_ow_aux,src_cm1_h);
-                if(src_cm1_ow_aux != current_ow[7:0]) {
-                    src_cm1_count = 0;
-                    R_src_cm1_ow.write(src_cm1_h, current_ow[7:0]);
+                R_src_cm3_ow.read(src_cm3_ow_aux,src_cm3_h);
+                if(src_cm3_ow_aux != current_ow[7:0]) {
+                    src_cm3_count = 0;
+                    R_src_cm3_ow.write(src_cm3_h, current_ow[7:0]);
                 } else {
-                    R_src_cm1_count.read(src_cm1_count, src_cm1_h);//不一定是加1
+                    R_src_cm3_count.read(src_cm3_count, src_cm3_h);//不一定是加1
                 }
+                //estimation in row 4
+                bit<8> src_cm4_ow_aux;
+                R_src_cm4_ow.read(src_cm4_ow_aux,src_cm4_h);
+                if(src_cm4_ow_aux != current_ow[7:0]) {
+                    src_cm4_count = 0;
+                    R_src_cm4_ow.write(src_cm4_h, current_ow[7:0]);
+                } else {
+                    R_src_cm4_count.read(src_cm4_count, src_cm4_h);//不一定是加1
+                }
+                /**************************************************************************/
 
+                if( src_filter_vote > 0 ) {
+                //case 3: incoming packet don't belong to the flow in filter, and the vote isn't zero
+                //incoming packet insert into Count Min Sketch
+                   src_cm1_count = src_cm1_count +1;
+                   src_cm2_count = src_cm2_count +1;
+                   src_cm3_count = src_cm3_count +1;
+                   src_cm4_count = src_cm4_count +1;
 
+                   R_src_cm1_count.write(src_cm1_h, src_cm1_count);
+                   R_src_cm2_count.write(src_cm2_h, src_cm2_count);
+                   R_src_cm3_count.write(src_cm3_h, src_cm3_count);
+                   R_src_cm4_count.write(src_cm4_h, src_cm4_count);
 
+                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.ip_count);
+                }
+                else {
+                //case 4: incoming packet don't belong to the flow in filter, and the vote is zero;
+                //which means that item should be exchange between layer1(filter) and layer2(Count Min Sketch)
+                   //get the estimated value of incoming packet
+                   src_cm1_count = src_cm1_count +1;
+                   src_cm2_count = src_cm2_count +1;
+                   src_cm3_count = src_cm3_count +1;
+                   src_cm4_count = src_cm4_count +1;
+                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count,  meta.ip_count);
+                   //decrease incoming packet's value in CM
+                   src_cm1_count = src_cm1_count - (bit<12>) meta.ip_count;
+                   src_cm2_count = src_cm2_count - (bit<12>) meta.ip_count;
+                   src_cm3_count = src_cm3_count - (bit<12>) meta.ip_count;
+                   src_cm4_count = src_cm4_count - (bit<12>) meta.ip_count;
+
+                   R_src_cm1_count.write(src_cm1_h, src_cm1_count);
+                   R_src_cm2_count.write(src_cm2_h, src_cm2_count);
+                   R_src_cm3_count.write(src_cm3_h, src_cm3_count);
+                   R_src_cm4_count.write(src_cm4_h, src_cm4_count);
+
+                   //the evict item in layer1 , add to cm
+                   //first get corrsponding position; then get counter value
+                   cm_hash(src_filter_key, src_cm1_h, src_cm2_h, src_cm3_h, src_cm4_h);
+                   //get_minvalue_cm(src_cm1_h, src_cm1_count, src_cm2_h, src_cm2_count, src_cm3_h, src_cm3_count, src_cm4_h, src_cm4_count,current_ow);
+
+                   /*************************************************************************/
+                    //conditional exception in action is not supported :(
+                    bit<8> src_cm1_ow_aux;
+                    R_src_cm1_ow.read(src_cm1_ow_aux,src_cm1_h);
+                    if(src_cm1_ow_aux != current_ow[7:0]) {
+                        src_cm1_count = 0;
+                        R_src_cm1_ow.write(src_cm1_h, current_ow[7:0]);
+                    } else {
+                    R_src_cm1_count.read(src_cm1_count, src_cm1_h);//不一定是加1
+                    }
+
+                    //estimation in row 2
+                    bit<8> src_cm2_ow_aux;
+                    R_src_cm2_ow.read(src_cm2_ow_aux,src_cm2_h);
+                    if(src_cm2_ow_aux != current_ow[7:0]) {
+                        src_cm2_count = 0;
+                        R_src_cm2_ow.write(src_cm2_h, current_ow[7:0]);
+                    } else {
+                        R_src_cm2_count.read(src_cm2_count, src_cm2_h);//不一定是加1
+                    }
+                    //estimation in row 3
+                    bit<8> src_cm3_ow_aux;
+                    R_src_cm3_ow.read(src_cm3_ow_aux,src_cm3_h);
+                    if(src_cm3_ow_aux != current_ow[7:0]) {
+                        src_cm3_count = 0;
+                        R_src_cm3_ow.write(src_cm3_h, current_ow[7:0]);
+                    } else {
+                        R_src_cm3_count.read(src_cm3_count, src_cm3_h);//不一定是加1
+                    }
+                    //estimation in row 4
+                    bit<8> src_cm4_ow_aux;
+                    R_src_cm4_ow.read(src_cm4_ow_aux,src_cm4_h);
+                    if(src_cm4_ow_aux != current_ow[7:0]) {
+                        src_cm4_count = 0;
+                        R_src_cm4_ow.write(src_cm4_h, current_ow[7:0]);
+                    } else {
+                        R_src_cm4_count.read(src_cm4_count, src_cm4_h);//不一定是加1
+                    }
+                    /**************************************************************************/
+
+                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.evict_ip_count);
+                   src_cm1_count = src_cm1_count + (bit<12>) meta.evict_ip_count;
+                   src_cm2_count = src_cm2_count + (bit<12>) meta.evict_ip_count;
+                   src_cm3_count = src_cm3_count + (bit<12>) meta.evict_ip_count;
+                   src_cm4_count = src_cm4_count + (bit<12>) meta.evict_ip_count;
+
+                   R_src_cm1_count.write(src_cm1_h, src_cm1_count);
+                   R_src_cm2_count.write(src_cm2_h, src_cm2_count);
+                   R_src_cm3_count.write(src_cm3_h, src_cm3_count);
+                   R_src_cm4_count.write(src_cm4_h, src_cm4_count);
+                }
+            }
+            //update filter structure
+            R_src_filter_key.write(src_filter_h,src_filter_key);
+            R_src_filter_count.write(src_filter_h,meta.ip_count);
+            R_src_filter_vote.write(src_filter_h,src_filter_vote);
+            ipv4_lpm.apply();
         }
     }
 }
