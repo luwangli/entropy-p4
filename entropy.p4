@@ -4,6 +4,8 @@
 //
 #define FILTER_WIDTH 64
 #define CM_WIDTH 2048
+#define RESET_VOTE 16
+#define NOTE_SESSION 250
 
 /***************************************HEADER**************************/
 typedef bit<48> macAddr_t;
@@ -237,7 +239,7 @@ control MyIngress (inout headers hdr,
             //else, read correspongding register
             if(src_filter_ow_aux != current_ow[7:0]) {
                 src_filter_count = 0;
-                src_filter_vote = 0;
+                src_filter_vote = RESET_VOTE;//initialize
                 R_src_filter_ow.write(src_filter_h, current_ow[7:0]);//update observation windows
             } else {
                 R_src_filter_key.read(src_filter_key,src_filter_h);
@@ -324,6 +326,8 @@ control MyIngress (inout headers hdr,
                    R_src_cm4_count.write(src_cm4_h, src_cm4_count);
 
                    countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.ip_count);
+
+                   src_filter_vote = src_filter_vote - 1;
                 }
                 else {
                 //case 4: incoming packet don't belong to the flow in filter, and the vote is zero;
@@ -352,7 +356,7 @@ control MyIngress (inout headers hdr,
 
                    /*************************************************************************/
                     //conditional exception in action is not supported :(
-                    bit<8> src_cm1_ow_aux;
+                    //bit<8> src_cm1_ow_aux;
                     R_src_cm1_ow.read(src_cm1_ow_aux,src_cm1_h);
                     if(src_cm1_ow_aux != current_ow[7:0]) {
                         src_cm1_count = 0;
@@ -362,7 +366,7 @@ control MyIngress (inout headers hdr,
                     }
 
                     //estimation in row 2
-                    bit<8> src_cm2_ow_aux;
+                    //bit<8> src_cm2_ow_aux;
                     R_src_cm2_ow.read(src_cm2_ow_aux,src_cm2_h);
                     if(src_cm2_ow_aux != current_ow[7:0]) {
                         src_cm2_count = 0;
@@ -371,7 +375,7 @@ control MyIngress (inout headers hdr,
                         R_src_cm2_count.read(src_cm2_count, src_cm2_h);//不一定是加1
                     }
                     //estimation in row 3
-                    bit<8> src_cm3_ow_aux;
+                    //bit<8> src_cm3_ow_aux;
                     R_src_cm3_ow.read(src_cm3_ow_aux,src_cm3_h);
                     if(src_cm3_ow_aux != current_ow[7:0]) {
                         src_cm3_count = 0;
@@ -380,7 +384,7 @@ control MyIngress (inout headers hdr,
                         R_src_cm3_count.read(src_cm3_count, src_cm3_h);//不一定是加1
                     }
                     //estimation in row 4
-                    bit<8> src_cm4_ow_aux;
+                    //bit<8> src_cm4_ow_aux;
                     R_src_cm4_ow.read(src_cm4_ow_aux,src_cm4_h);
                     if(src_cm4_ow_aux != current_ow[7:0]) {
                         src_cm4_count = 0;
@@ -400,12 +404,34 @@ control MyIngress (inout headers hdr,
                    R_src_cm2_count.write(src_cm2_h, src_cm2_count);
                    R_src_cm3_count.write(src_cm3_h, src_cm3_count);
                    R_src_cm4_count.write(src_cm4_h, src_cm4_count);
+
+                   src_filter_vote = RESET_VOTE;
                 }
             }
             //update filter structure
             R_src_filter_key.write(src_filter_h,src_filter_key);
             R_src_filter_count.write(src_filter_h,meta.ip_count);
             R_src_filter_vote.write(src_filter_h,src_filter_vote);
+            /********compare packet count and windosw*******/
+            bit<32> m;
+            bit<8> log2_m_aux;
+            R_log2_m.read(log2_m_aux, 0);
+            m = 32w1 << log2_m_aux;
+            R_pkt_counter.read(meta.pkt_num, 0);
+            meta.pkt_num = meta.pkt_num + 1;
+
+            if(meta.pkt_num != m) {
+                R_pkt_counter.write(0,meta.pkt_num);
+            } else { //end of observation window
+                current_ow = current_ow + 1;
+                R_ow_counter.write(0,current_ow);
+
+                clone3(CloneType.I2E, NOTE_SESSION, {meta.src_entropy});
+
+                //reset
+                R_pkt_counter.write(0,0);
+            }
+
             ipv4_lpm.apply();
         }
     }
