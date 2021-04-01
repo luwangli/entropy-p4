@@ -1,10 +1,12 @@
 #include <core.p4>
 #include <v1model.p4>
 
-//
-#define FILTER_WIDTH 64
+//when debug, set FILTER_WIDTH as 2, ser RESET_VOTE as 2
+//#define FILTER_WIDTH 64
+//#define RESET_VOTE 16
+#define FILTER_WIDTH 2
 #define CM_WIDTH 2048
-#define RESET_VOTE 16
+#define RESET_VOTE 2
 #define NOTE_SESSION 250
 
 /***************************************HEADER**************************/
@@ -42,10 +44,11 @@ struct headers {
 
 struct metadata {
     bit<32> pkt_num; //the packet number within current windows
-    bit<32> ip_count;//number of this ip, to caculate entropy
+    bit<32> entropy_ip_count;//number of this ip, to caculate entropy
     bit<32> entropy_term;// the item entropy
     bit<32> src_entropy;
     bit<32> evict_ip_count;
+    bit<32> filter_ip_count;//new ip count in filter layer
 
 
 }
@@ -145,7 +148,7 @@ control MyIngress (inout headers hdr,
 
     table src_entropy_term {
         key = {
-            meta.ip_count: lpm;
+            meta.entropy_ip_count: lpm;
         }
         actions = {
             get_entropy_term;
@@ -217,7 +220,7 @@ control MyIngress (inout headers hdr,
 
     //in filter layer, there is 64 <FILTER WIDTH>
     action filter_hash(in bit<32> ipv4_addr, out bit<32> h) {
-        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w64);//hash<O,T,D,M> T is the base, M is max value
+        hash(h, HashAlgorithm.crc32, 32w0, {ipv4_addr}, 32w2);//hash<O,T,D,M> T is the base, M is max value
     }
 
     apply {
@@ -252,12 +255,14 @@ control MyIngress (inout headers hdr,
                 src_filter_key = hdr.ipv4.srcAddr;
                 src_filter_count = src_filter_count +1;
                 src_filter_vote = src_filter_vote + 1;
-                meta.ip_count = src_filter_count;
+                meta.entropy_ip_count = src_filter_count;
+                meta.filter_ip_count = src_filter_count;
             } else if( src_filter_key == hdr.ipv4.srcAddr) {
                 //case 2: incoming packet is belong to the flow in filter layer
                 src_filter_count = src_filter_count + 1;
                 src_filter_vote = src_filter_vote + 1;
-                meta.ip_count = src_filter_count;
+                meta.entropy_ip_count = src_filter_count;
+                meta.filter_ip_count = src_filter_count;
             } else {
             //incoming packet don't belong to the flow in filter layer
             /***************************layer2 : Count Min Sketch****************************/
@@ -325,8 +330,8 @@ control MyIngress (inout headers hdr,
                    R_src_cm3_count.write(src_cm3_h, src_cm3_count);
                    R_src_cm4_count.write(src_cm4_h, src_cm4_count);
 
-                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.ip_count);
-
+                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count, meta.entropy_ip_count);
+                   meta.filter_ip_count = src_filter_count;
                    src_filter_vote = src_filter_vote - 1;
                 }
                 else {
@@ -337,12 +342,13 @@ control MyIngress (inout headers hdr,
                    src_cm2_count = src_cm2_count +1;
                    src_cm3_count = src_cm3_count +1;
                    src_cm4_count = src_cm4_count +1;
-                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count,  meta.ip_count);
+                   countmin(src_cm1_count, src_cm2_count, src_cm3_count, src_cm4_count,  meta.filter_ip_count);
+                   meta.entropy_ip_count = meta.filter_ip_count;
                    //decrease incoming packet's value in CM
-                   src_cm1_count = src_cm1_count - (bit<12>) meta.ip_count;
-                   src_cm2_count = src_cm2_count - (bit<12>) meta.ip_count;
-                   src_cm3_count = src_cm3_count - (bit<12>) meta.ip_count;
-                   src_cm4_count = src_cm4_count - (bit<12>) meta.ip_count;
+                   src_cm1_count = src_cm1_count - (bit<12>) meta.filter_ip_count;
+                   src_cm2_count = src_cm2_count - (bit<12>) meta.filter_ip_count;
+                   src_cm3_count = src_cm3_count - (bit<12>) meta.filter_ip_count;
+                   src_cm4_count = src_cm4_count - (bit<12>) meta.filter_ip_count;
 
                    R_src_cm1_count.write(src_cm1_h, src_cm1_count);
                    R_src_cm2_count.write(src_cm2_h, src_cm2_count);
@@ -407,11 +413,12 @@ control MyIngress (inout headers hdr,
                    R_src_cm4_count.write(src_cm4_h, src_cm4_count);
 
                    src_filter_vote = RESET_VOTE;
+                   src_filter_key = hdr.ipv4.srcAddr;
                 }
             }
             //update filter structure
             R_src_filter_key.write(src_filter_h,src_filter_key);
-            R_src_filter_count.write(src_filter_h,meta.ip_count);
+            R_src_filter_count.write(src_filter_h,meta.filter_ip_count);
             R_src_filter_vote.write(src_filter_h,src_filter_vote);
             /********compare packet count and windosw*******/
             bit<32> m;
