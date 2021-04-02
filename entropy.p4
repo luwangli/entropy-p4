@@ -15,10 +15,17 @@ typedef bit<32> ip4Addr_t;
 typedef bit<9> egressSpec_t;
 
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> TYPE_ENTROPY = 0x700;
 
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
+    bit<16> etherType;
+}
+
+header entropy_t {
+    bit<32> pkt_num;
+    bit<32> src_entropy;
     bit<16> etherType;
 }
 
@@ -40,6 +47,7 @@ header ipv4_t {
 struct headers {
     ethernet_t ethernet;
     ipv4_t ipv4;
+    entropy_t entropy;
 }
 
 struct metadata {
@@ -66,6 +74,15 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select (hdr.ethernet.etherType) {
+//            TYPE_ENTROPY: parse_entropy;
+            TYPE_IPV4: parse_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_entropy {
+        packet.extract(hdr.entropy);
+        transition select(hdr.entropy.etherType) {
             TYPE_IPV4: parse_ipv4;
             default: accept;
         }
@@ -116,7 +133,7 @@ control MyIngress (inout headers hdr,
     register<bit<8>>(CM_WIDTH) R_src_cm4_ow;
 
     //entropy
-    register<bit<32>>(1) R_src_entropy;
+    register<bit<32>>(1) R_src_S;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -416,6 +433,18 @@ control MyIngress (inout headers hdr,
                    src_filter_key = hdr.ipv4.srcAddr;
                 }
             }
+
+            //get item entrop, bu LPM lookup
+            if(meta.entropy_ip_count > 0) {
+                src_entropy_term.apply();
+            } else {
+                meta.entropy_term = 0;
+            }
+            bit<32> src_S_aux;
+            R_src_S.read(src_S_aux, 0);
+            src_S_aux = src_S_aux + meta.entropy_term;
+            R_src_S.write(0,src_S_aux);
+
             //update filter structure
             R_src_filter_key.write(src_filter_h,src_filter_key);
             R_src_filter_count.write(src_filter_h,meta.filter_ip_count);
@@ -434,7 +463,9 @@ control MyIngress (inout headers hdr,
                 current_ow = current_ow + 1;
                 R_ow_counter.write(0,current_ow);
 
-                clone3(CloneType.I2E, NOTE_SESSION, {meta.src_entropy});
+                meta.src_entropy = ((bit<32>)log2_m_aux << 4) - (src_S_aux >> log2_m_aux);
+
+                clone3(CloneType.I2E, NOTE_SESSION, {meta.pkt_num,meta.src_entropy});
 
                 //reset
                 R_pkt_counter.write(0,0);
@@ -449,7 +480,17 @@ control MyIngress (inout headers hdr,
 control MyEgress (inout headers hdr,
                     inout metadata meta,
                     inout standard_metadata_t standard_metadata ) {
-    apply{}
+    const bit<32> CLONE = 1;
+    apply {
+        if(standard_metadata.instance_type == CLONE) {
+            hdr.entropy.setValid();
+            hdr.entropy.pkt_num = meta.pkt_num;
+            hdr.entropy.src_entropy = meta.src_entropy;
+            hdr.entropy.etherType = hdr.ethernet.etherType;
+            hdr.ethernet.etherType = TYPE_ENTROPY;
+        }
+
+    }
 }
 
 /**********************COMPUTE CHECKSUM**********************************/
