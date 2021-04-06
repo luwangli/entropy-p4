@@ -1,8 +1,6 @@
-#pragma once
-
 #include <pcap.h>
-#include <string.h>
-#include <stdio.h>
+#include <string>
+#include <cstdint>
 
 #define TYPE_ENTROPY 0x0700
 

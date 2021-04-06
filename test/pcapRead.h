@@ -1,8 +1,7 @@
 #pragma once
-
 #include <pcap.h>
 #include <string.h>
-#include <stdio.h>
+#include <cstdint>
 
 #define TYPE_ENTROPY 0x0700
 
@@ -24,7 +23,7 @@
             PcapRead(const PcapRead&) = delete;
             PcapRead& operator=(const PcapRead&) = delete;
 
-            ~PcapRead();
+//            ~PcapRead();
 
             int nextPacket(PcapPacket& pcap_packet);
             uint32_t srcIpv4(const PcapPacket& pcap_packet) const;
@@ -43,4 +42,11 @@
 
 
     };
+
+    int PcapRead::nextPacket(PcapPacket& pcap_packet) {
+        const int ret =pcap_next_ex(mPcapHandler,&pcap_packet.metadata,&pcap_packet.data);
+        if(ret = -1)
+            throw std::runtime_error(pcap_geterr(mPcapHandler));
+        return ret;
+    }
 

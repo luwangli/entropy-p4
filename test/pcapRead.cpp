@@ -1,10 +1,9 @@
-#include "../include/pcapRead.h"
+#include "pcapRead.h"
 
 #include <stdexcept>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <net/ethernet.h>
-#include <iostream>
 
 
 
@@ -23,34 +22,25 @@
 
     int PcapRead::nextPacket(PcapPacket& pcap_packet) {
         const int ret =pcap_next_ex(mPcapHandler,&pcap_packet.metadata,&pcap_packet.data);
-        if(ret == -1)
+        if(ret = -1)
             throw std::runtime_error(pcap_geterr(mPcapHandler));
         return ret;
     }
     std::size_t PcapRead::l2HeaderLength() const {
         uint16_t l2_header_length = 0;
-        if (mLinkType == DLT_EN10MB){
-            l2_header_length = 14;
-            std::cout<<"DLT_EN"<<std::endl;
-        } else if (mLinkType == DLT_C_HDLC)
-            l2_header_length = 4;
-        else if(mLinkType == 12 || mLinkType == DLT_IPV4)
+        if(mLinkType == 12 || mLinkType == DLT_IPV4)
             l2_header_length = 0;
         else
-            throw std::runtime_error("unsupported link type: ? " + std::to_string(mLinkType));
+            throw std::runtime_error("unsupported link type" + std::to_string(mLinkType));
         return l2_header_length;
     }
 
-    uint16_t PcapRead::l2EtherType(const PcapPacket& pcap_packet) const {
+    uint16_t PcapRead::l2EtherType(cosnt PcapPacket& pcap_packet) const {
         uint16_t ether_type = 0;
-        if(mLinkType == DLT_EN10MB)
-            ether_type = ntohs(*reinterpret_cast<const uint16_t*>(pcap_packet.data +12));
-        else if(mLinkType == DLT_C_HDLC)
-            ether_type = ntohs(*reinterpret_cast<const uint16_t*>(pcap_packet.data + 2));
-        else if(mLinkType ==12|| mLinkType == DLT_IPV4)
+        if(mLinkType ==12|| mLinkType == DLT_IPV4)
             ether_type = ETHERTYPE_IP;
         else
-            throw std::runtime_error("unsupported link type: eth: " + std::to_string(mLinkType));
+            throw std::runtime_error("unsupported link type" + std::to_string(mLinkType));
         return ether_type;
     }
 
@@ -70,22 +60,22 @@
     }
 
      uint32_t PcapRead::entropyPktNum(const PcapPacket& pcap_packet) const {
-        if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
+        if(l2EtherType(pcap_packet) != ETHERTYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
         return ntohl(entropy_header->pkt_num);
      }
      uint32_t PcapRead::entropySrcEntropy(const PcapPacket& pcap_packet) const {
-        if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
+        if(l2EtherType(pcap_packet) != ETHERTYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
         return ntohl(entropy_header->src_entropy);
 
      }
      uint16_t PcapRead::entropyEtherType(const PcapPacket& pcap_packet) const {
-        if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
+        if(l2EtherType(pcap_packet) != ETHERTYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
-        return ntohl(entropy_header->etherType);
+        return ntohl(entropy_header->ether_type);
 
      }
