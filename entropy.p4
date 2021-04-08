@@ -134,6 +134,7 @@ control MyIngress (inout headers hdr,
 
     //entropy
     register<bit<32>>(1) R_src_S;
+    register<bit<32>>(1) R_store_test_entropy;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -469,6 +470,8 @@ control MyIngress (inout headers hdr,
 
                 //reset
                 R_pkt_counter.write(0,0);
+                R_src_S.write(0,0);
+                R_store_test_entropy.write(0,meta.src_entropy);
             }
 
             ipv4_lpm.apply();
