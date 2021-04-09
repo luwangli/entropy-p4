@@ -46,8 +46,9 @@ header ipv4_t {
 
 struct headers {
     ethernet_t ethernet;
-    ipv4_t ipv4;
+
     entropy_t entropy;
+    ipv4_t ipv4;
 }
 
 struct metadata {
@@ -74,7 +75,7 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select (hdr.ethernet.etherType) {
-//            TYPE_ENTROPY: parse_entropy;
+            TYPE_ENTROPY: parse_entropy;
             TYPE_IPV4: parse_ipv4;
             default: accept;
         }
@@ -464,9 +465,9 @@ control MyIngress (inout headers hdr,
                 current_ow = current_ow + 1;
                 R_ow_counter.write(0,current_ow);
 
-                meta.src_entropy = ((bit<32>)log2_m_aux << 4) - (src_S_aux >> log2_m_aux);
-
-                clone3(CloneType.I2E, NOTE_SESSION, {meta.pkt_num,meta.src_entropy});
+               meta.src_entropy = (((bit<32>)log2_m_aux << 4)-(src_S_aux >> log2_m_aux));
+              
+                clone3(CloneType.I2E, NOTE_SESSION, meta);
 
                 //reset
                 R_pkt_counter.write(0,0);
@@ -490,6 +491,7 @@ control MyEgress (inout headers hdr,
             hdr.entropy.pkt_num = meta.pkt_num;
             hdr.entropy.src_entropy = meta.src_entropy;
             hdr.entropy.etherType = hdr.ethernet.etherType;
+         //   hdr.entropy.etherType = TYPE_ENTROPY;
             hdr.ethernet.etherType = TYPE_ENTROPY;
         }
 
@@ -519,8 +521,9 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.ethernet);
-        packet.emit(hdr.ipv4);
+  //      packet.emit(hdr.ethernet);
+        packet.emit(hdr);
+  //      packet.emit(hdr.ipv4);
     }
 }
 

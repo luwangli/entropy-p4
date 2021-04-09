@@ -41,7 +41,10 @@ int main(int argc, char* argv[]) {
         PcapPacket pcap_packet;
         while (pcap_read.nextPacket(pcap_packet) > 0) {
             std::cout<< 1000000*pcap_packet.metadata->ts.tv_sec + pcap_packet.metadata->ts.tv_usec<<" ";
-            std::cout<<pcap_read.entropySrcEntropy(pcap_packet)<<std::endl;
+//            std::cout<<pcap_read.entropySrcEntropy(pcap_packet)<<std::endl;
+//            std::cout<<pcap_read.entropyEtherType(pcap_packet)<< std::endl;
+ //           pcap_read.entropySrcEntropy(pcap_packet);
+            pcap_read.entropyPktNum(pcap_packet);
         }
     } catch (std::exception& e) {
         std::cerr << "Error: "<< e.what() <<std::endl;

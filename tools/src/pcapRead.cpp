@@ -29,7 +29,7 @@
     }
     std::size_t PcapRead::l2HeaderLength() const {
         uint16_t l2_header_length = 0;
-        if (mLinkType == DLT_EN10MB){
+        if (mLinkType == DLT_EN10MB){//ethernet type(10Mb,100Mb),header length is 14 Byte
             l2_header_length = 14;
             std::cout<<"DLT_EN"<<std::endl;
         } else if (mLinkType == DLT_C_HDLC)
@@ -73,12 +73,23 @@
         if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
+        /**********test***************/
+    //    std::cout<<"pkt:"<<entropy_header->pkt_num<<std::endl;
+
+        std::cout<<"ntohl pkt:"<<ntohl(entropy_header->pkt_num)<<std::endl;
+        std::cout<<"ntohl entropy:"<<ntohl(entropy_header->src_entropy)<<std::endl;
+    //    std::cout<<entropy_header->src_entropy<<std::endl;
+        std::cout<<"type:"<<entropy_header->etherType<<std::endl;
+    //    std::cout<<"nothl type"<<ntohl(entropy_header->etherType)<<std::endl;
+
+        /*****************************/
         return ntohl(entropy_header->pkt_num);
      }
      uint32_t PcapRead::entropySrcEntropy(const PcapPacket& pcap_packet) const {
         if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
+        std::cout<<ntohl(entropy_header->src_entropy)<<std::endl;
         return ntohl(entropy_header->src_entropy);
 
      }
