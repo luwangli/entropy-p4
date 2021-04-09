@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <boost/program_options.hpp>
 
 #include "include/pcapRead.h"
@@ -36,6 +37,12 @@ int main(int argc, char* argv[]) {
 
     boost::program_options::notify(variables_map);
 
+    std::ofstream output_file("result/p4_estimate_entropy.csv");
+    if(!output_file) {
+        std::cout<<"Uable open file: result/p4_estimate_entropy.csv"<<std::endl;
+        exit(1);
+    }
+
     try {
         PcapRead pcap_read(pcap_filename);
         PcapPacket pcap_packet;
@@ -45,11 +52,14 @@ int main(int argc, char* argv[]) {
 //            std::cout<<pcap_read.entropyEtherType(pcap_packet)<< std::endl;
  //           pcap_read.entropySrcEntropy(pcap_packet);
             pcap_read.entropyPktNum(pcap_packet);
+            output_file<<pcap_read.entropySrcEntropy(pcap_packet)<<",";
         }
     } catch (std::exception& e) {
         std::cerr << "Error: "<< e.what() <<std::endl;
         return -1;
     }
+    output_file.close();
+
     return 0;
 }
 

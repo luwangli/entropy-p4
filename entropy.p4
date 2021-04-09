@@ -466,7 +466,7 @@ control MyIngress (inout headers hdr,
                 R_ow_counter.write(0,current_ow);
 
                meta.src_entropy = (((bit<32>)log2_m_aux << 4)-(src_S_aux >> log2_m_aux));
-              
+
                 clone3(CloneType.I2E, NOTE_SESSION, meta);
 
                 //reset
