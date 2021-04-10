@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 //            std::cout<<pcap_read.entropyEtherType(pcap_packet)<< std::endl;
  //           pcap_read.entropySrcEntropy(pcap_packet);
             pcap_read.entropyPktNum(pcap_packet);
-            output_file<<pcap_read.entropySrcEntropy(pcap_packet)<<",";
+            output_file<<pcap_read.entropySrcEntropy(pcap_packet)<<std::endl;
         }
     } catch (std::exception& e) {
         std::cerr << "Error: "<< e.what() <<std::endl;
