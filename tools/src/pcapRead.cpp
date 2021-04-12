@@ -90,9 +90,14 @@
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
         std::cout<<ntohl(entropy_header->src_entropy)<<std::endl;
-        return ntohl(entropy_header->src_entropy);
+        int temp = ntohl(entropy_header->src_entropy);
+//        temp2 = data_convert(temp)
+        std::cout << temp <<std::endl;
+//        std::cout << temp2 <<std::endl
 
+        return temp;
      }
+
      uint16_t PcapRead::entropyEtherType(const PcapPacket& pcap_packet) const {
         if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
@@ -100,3 +105,9 @@
         return ntohl(entropy_header->etherType);
 
      }
+
+
+
+
+
+
