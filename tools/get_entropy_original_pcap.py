@@ -27,6 +27,7 @@ def Entropy2(labels, base=2):
     en = stats.entropy(data, base = base)
 
 
+
 if __name__ == "__main__":
  #   ips = Get_IP("result/t1.pcap")
     ips = Get_IP("result/3_src1.pcap")
