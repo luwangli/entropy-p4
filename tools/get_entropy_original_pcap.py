@@ -29,8 +29,8 @@ def Entropy2(labels, base=2):
 
 
 if __name__ == "__main__":
- #   ips = Get_IP("result/t1.pcap")
-    ips = Get_IP("result/3_src1.pcap")
+    ips = Get_IP("result/skew-1.4.pcap")
+ #   ips = Get_IP("result/3_src1.pcap")
     real_entropy = []
 
     ips_count = np.size(ips)

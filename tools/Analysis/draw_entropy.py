@@ -40,16 +40,22 @@ def data_convert(data):
 
 p4_entropy = pd.read_csv("../result/p4_estimate_entropy.csv",header=None,names=['en_p4'])
 real_entropy = pd.read_csv("../result/real_entropy.csv")
+#compare algorithm. https://github.com/aclapolli/ddosd-p4/blob/master/README.md
+ec_entropy = pd.read_csv("../result/ddosd-result.csv",header=None,names=['t','en_ec'])
+
 print p4_entropy
 print real_entropy
-
+print ec_entropy
 
 p4_entropy_dec = [] #the last 4 bit store as decimals. so we need convert it
 for i in range(len(p4_entropy.en_p4)):
     t = data_convert(p4_entropy.en_p4[i])
     p4_entropy_dec.append(t)
 
-print p4_entropy_dec
+ec_entropy_dec = []
+for i in range(len(ec_entropy)):
+    t = data_convert(ec_entropy.en_ec[i])
+    ec_entropy_dec.append(t)
 
 
 
@@ -57,6 +63,7 @@ print p4_entropy_dec
 x= list(range(1,16))
 plt.plot(x,p4_entropy_dec)
 plt.plot(x,real_entropy.entropy)
+plt.plot(x,ec_entropy_dec)
 plt.show();
 
 
