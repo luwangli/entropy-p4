@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 
 def bin2dec(b):
@@ -57,13 +58,25 @@ for i in range(len(ec_entropy)):
     t = data_convert(ec_entropy.en_ec[i])
     ec_entropy_dec.append(t)
 
+x_FL = p4_entropy_dec
+x_EC = ec_entropy_dec
+x_Real = real_entropy.entropy
 
-
-
+error1 = [x_FL[i] - x_Real[i] for i in range(0,len(x_FL))]
+error1_abs = np.absolute(error1)
+error2 = [x_EC[i] - x_Real[i] for i in range(0,len(x_EC))]
+error2_abs = np.absolute(error2)
+print np.mean(error1_abs)
+print np.mean(error2_abs)
+#print len(p4_entropy_dec)
 x= list(range(1,16))
-plt.plot(x,p4_entropy_dec)
-plt.plot(x,real_entropy.entropy)
-plt.plot(x,ec_entropy_dec)
+l1, = plt.plot(x,p4_entropy_dec)
+l2, = plt.plot(x,ec_entropy_dec)
+l3, = plt.plot(x,real_entropy.entropy)
+
+plt.legend(handles=[l1,l2,l3],labels=['Filter-Sketch','Euclid','Real Entropy'],loc='best');
+plt.xlabel('Observation Windows')
+plt.ylabel('entropy value')
 plt.show();
 
 
