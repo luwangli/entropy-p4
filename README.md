@@ -1,7 +1,10 @@
 # entropy-p4
-# Introduction
+## Introduction
 this reposity aim to estimate entropy quickly and accurately in data plane
-
+##Getting Started
+we recommend using an Ubuntu 16.04 which is our experimental machine.
+This work depends on P4
+you need install bmv2, p4c, and so on. 
 # run
  1. in mininet CLI, type " xterm h1", open h1 windows.
  2. run
