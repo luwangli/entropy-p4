@@ -46,7 +46,6 @@ header ipv4_t {
 
 struct headers {
     ethernet_t ethernet;
-
     entropy_t entropy;
     ipv4_t ipv4;
 }

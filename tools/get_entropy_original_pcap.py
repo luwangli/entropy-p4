@@ -30,7 +30,7 @@ def Entropy2(labels, base=2):
 
 if __name__ == "__main__":
  #   ips = Get_IP("result/skew-1.0.pcap")
-    ips = Get_IP("result/3_src1.pcap")
+    ips = Get_IP("result/ddostrace.pcap")
     real_entropy = []
 
     ips_count = np.size(ips)
@@ -45,4 +45,4 @@ if __name__ == "__main__":
         real_entropy.append(temp_e)
 #    print real_entropy
     data = pd.DataFrame({'entropy':real_entropy},index=None)
-    data.to_csv('result/real_entropy.csv',index=False)
+    data.to_csv('result/ddostrace.csv',index=False)
