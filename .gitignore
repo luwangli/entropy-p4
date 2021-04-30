@@ -1,3 +1,4 @@
 *.pcap
-logs/*
-build/*
+logs/
+build/
+pcaps/
