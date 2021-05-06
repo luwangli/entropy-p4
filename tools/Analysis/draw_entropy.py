@@ -35,6 +35,8 @@ def data_convert(data):
     int_part = data >> 4
     dec_part = data & 0xf
     t1 = dec2bin2(dec_part)
+    while len(t1) < 4:
+        t1.insert(0, 0)
     dec_result = bin2dec(t1)
     result = int_part + dec_result
     return result
