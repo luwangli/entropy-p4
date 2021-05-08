@@ -33,5 +33,5 @@ we have provided a tool(``tools/get_entropy_original_pcap.py``) to calculate rea
 you can change the filename, then run it.
 
 # 3. get entropy with Euclid
-we will compare our Filter-Sketch with Euclid which is implemented in 
+we will compare our Filter-Sketch with Euclid which is released in [ddosd-p4](https://github.com/aclapolli/ddosd-p4)
    
