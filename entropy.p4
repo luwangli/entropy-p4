@@ -5,7 +5,7 @@
 //#define FILTER_WIDTH 64
 //#define RESET_VOTE 16
 #define FILTER_WIDTH 64
-#define CM_WIDTH 512
+#define CM_WIDTH 918
 #define RESET_VOTE 16
 #define NOTE_SESSION 250
 

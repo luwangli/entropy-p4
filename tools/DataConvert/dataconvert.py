@@ -28,6 +28,6 @@ def bin2dec(b):
     return d
 
 
-data = 184
+data = 116
 result = data_convert(data)
 print result
