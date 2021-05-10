@@ -1,4 +1,6 @@
-# entropy-p4
+# Filter-Sketch
+This is the code for the paper "Filter-Sketch: a two-layer sketch for entropy estimation in data plane".
+The target architecture for this proof-of-concept code is the simple_switch variation of the P4 behavioral model software reference implementation.
 ## Introduction
 this reposity aim to estimate entropy quickly and accurately in data plane
 ##Getting Started
