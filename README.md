@@ -1,13 +1,13 @@
 # Filter-Sketch
 This is the code for the paper "Filter-Sketch: a two-layer sketch for entropy estimation in data plane".
 The target architecture for this proof-of-concept code is the simple_switch variation of the P4 behavioral model software reference implementation.
-## Introduction
+# Introduction
 this reposity aim to estimate entropy quickly and accurately in data plane
-##Getting Started
+## Getting Started
 we recommend using an Ubuntu 16.04 which is our experimental machine.
 This work depends on P4
 you need install bmv2, p4c, and so on. 
-#topo
+## topo
 we have configure p4-switch that all packet coming form h1 are forwarded to h2. until the end of 
 observation windows, the packet with estimated entropy value will froward to h3.  
 so we can capture the packet from h3 to get the estimated entropy. Note, you need take h1 as the sender as follows.
