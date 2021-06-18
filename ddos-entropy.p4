@@ -117,6 +117,7 @@ control MyIngress (inout headers hdr,
     //observation window control parameters
     register<bit<32>>(1) R_ow_counter;
     register<bit<32>>(1) R_pkt_counter;
+    register<bit<32>>(1) R_training_len;
 
     // filter struct
     register<bit<32>>(FILTER_WIDTH) R_src_filter_key;
@@ -139,6 +140,15 @@ control MyIngress (inout headers hdr,
     //entropy
     register<bit<32>>(1) R_src_S;
     register<bit<32>>(1) R_store_test_entropy;
+
+    // entropy for ddos detection
+    register<bit<32>>(1) R_src_ewma;
+    register<bit<32>>(1) R_src_ewmmd;
+
+    //smoothing and sensitivity coefficient
+    register<bit<8>>(1) R_alpha;
+    register<bit<8>>(1) R_k;
+
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -469,6 +479,43 @@ control MyIngress (inout headers hdr,
                 R_ow_counter.write(0,current_ow);
 
                 meta.src_entropy = (((bit<32>)log2_m_aux << 4)-(src_S_aux >> log2_m_aux));
+
+                //calculate normal entropy
+                R_src_ewma.read(meta.src_ewma,0);
+                R_src_ewmmd.read(meta.src_ewmmd,0);
+                if(current_ow == 1) {
+                    //for the first observe windows, the reason
+                    meta.src_ewma = meta.src_entropy << 14;
+                    meta.src_ewmmd = 0;
+                } else {
+                    meta.alarm  = 0;
+                    bit<32> training_len_aux;
+                    R_training_len.read(training_len_aux, 0);
+                    // we have set training phase
+                    if( current_ow > training_len_aux) {
+                        bit<8> k_aux;
+                        bit<32> src_thresh;
+                        R_k.read(k_aux,0);
+                        src_thresh = meta.src_ewma + ((bit<32>)k_aux * meta.src_ewmmd >> 3);
+                        if((meta.src_entropy << 14) > src_thresh)
+                            meta.alarm = 1;
+                    }
+
+                    if (meta.alarm == 0) {
+                        bit<8> alpha_aux;
+                        R_alpha.read(alpha_aux, 0);
+
+                        meta.src_ewma = (((bit<32>)alpha_aux * meta.src_entropy) << 6) + (((0x0000100 - (bit<32>)alpha_aux) * meta.src_ewma) >> 8);
+                        if ((meta.src_entropy << 14) >= meta.src_ewma)
+                           meta.src_ewmmd = (((bit<32>)alpha_aux*((meta.src_entropy << 14) - meta.src_ewma)) >> 8) + (((0x00000100 - (bit<32>)alpha_aux)*meta.src_ewmmd) >> 8);
+                        else
+                            meta.src_ewmmd = (((bit<32>)alpha_aux*(meta.src_ewma - (meta.src_entropy << 14))) >> 8) + (((0x00000100 - (bit<32>)alpha_aux)*meta.src_ewmmd) >> 8);
+                    }
+                }
+
+                R_src_ewma.write(0,meta.src_ewma);
+                R_src_ewmmd.write(0, meta.src_ewmmd);
+
 
                 clone3(CloneType.I2E, NOTE_SESSION, meta);
 

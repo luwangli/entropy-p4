@@ -15,7 +15,7 @@ so we can capture the packet from h3 to get the estimated entropy. Note, you nee
 ![topology](./topo/topo.JPG)
 #  1. get entropy from bmv2 with Filter-Sketch
 ## build environment
- open terminal, type``make cleean``  
+ open terminal, type``make clean``  
  then type``make``
 ## send packet
  in mininet CLI, open h1 windows
