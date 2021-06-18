@@ -2,7 +2,6 @@
 logs/
 build/
 pcaps/
-analysis/
 tools/Analysis
 tools/DataConvert
 tools/result

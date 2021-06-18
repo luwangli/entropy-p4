@@ -26,6 +26,9 @@ header ethernet_t {
 header entropy_t {
     bit<32> pkt_num;
     bit<32> src_entropy;
+    bit<32> src_ewma;
+    bit<32> src_ewmmd;
+    bit<8> alarm;
     bit<16> etherType;
 }
 
@@ -55,10 +58,11 @@ struct metadata {
     bit<32> entropy_ip_count;//number of this ip, to caculate entropy
     bit<32> entropy_term;// the item entropy
     bit<32> src_entropy;
+    bit<32> src_ewma;
+    bit<32> src_ewmmd;
     bit<32> evict_ip_count;
     bit<32> filter_ip_count;//new ip count in filter layer
-
-
+    bit<8> alarm;
 }
 
 /***********************************PARSER *****************************/
@@ -464,7 +468,7 @@ control MyIngress (inout headers hdr,
                 current_ow = current_ow + 1;
                 R_ow_counter.write(0,current_ow);
 
-               meta.src_entropy = (((bit<32>)log2_m_aux << 4)-(src_S_aux >> log2_m_aux));
+                meta.src_entropy = (((bit<32>)log2_m_aux << 4)-(src_S_aux >> log2_m_aux));
 
                 clone3(CloneType.I2E, NOTE_SESSION, meta);
 
