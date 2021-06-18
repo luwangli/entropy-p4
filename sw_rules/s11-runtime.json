@@ -1,7 +1,7 @@
 {
   "target": "bmv2",
-  "p4info": "build/entropy.p4.p4info.txt",
-  "bmv2_json": "build/entropy.json",
+  "p4info": "build/ddos-entropy.p4.p4info.txt",
+  "bmv2_json": "build/ddos-entropy.json",
   "table_entries": [
     {
       "table": "MyIngress.ipv4_lpm",
