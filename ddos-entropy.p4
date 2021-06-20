@@ -261,7 +261,7 @@ control MyIngress (inout headers hdr,
             R_ow_counter.read(current_ow,0);
 
             bit<32> src_filter_h;
-            filter_hash(hdr.ipv4.srcAddr, src_filter_h);
+            filter_hash(hdr.ipv4.dstAddr, src_filter_h);
 
             bit<8> src_filter_ow_aux;
             R_src_filter_ow.read(src_filter_ow_aux, src_filter_h);
@@ -284,12 +284,12 @@ control MyIngress (inout headers hdr,
 
             if(src_filter_count == 0) {
             //case 1: start of a new observation windows
-                src_filter_key = hdr.ipv4.srcAddr;
+                src_filter_key = hdr.ipv4.dstAddr;
                 src_filter_count = src_filter_count +1;
                 src_filter_vote = src_filter_vote + 1;
                 meta.entropy_ip_count = src_filter_count;
                 meta.filter_ip_count = src_filter_count;
-            } else if( src_filter_key == hdr.ipv4.srcAddr) {
+            } else if( src_filter_key == hdr.ipv4.dstAddr) {
                 //case 2: incoming packet is belong to the flow in filter layer
                 src_filter_count = src_filter_count + 1;
                 src_filter_vote = src_filter_vote + 1;
@@ -306,7 +306,7 @@ control MyIngress (inout headers hdr,
                 bit<12> src_cm2_count;
                 bit<12> src_cm3_count;
                 bit<12> src_cm4_count;
-                cm_hash(hdr.ipv4.srcAddr, src_cm1_h, src_cm2_h, src_cm3_h, src_cm4_h);
+                cm_hash(hdr.ipv4.dstAddr, src_cm1_h, src_cm2_h, src_cm3_h, src_cm4_h);
                 //get_minvalue_cm(src_cm1_h, src_cm1_count,src_cm2_h,src_cm2_count,src_cm3_h,src_cm3_count,src_cm4_h,src_cm4_count,current_ow);
 
                 /*************************************************************************/
@@ -445,7 +445,7 @@ control MyIngress (inout headers hdr,
                    R_src_cm4_count.write(src_cm4_h, src_cm4_count);
 
                    src_filter_vote = RESET_VOTE;
-                   src_filter_key = hdr.ipv4.srcAddr;
+                   src_filter_key = hdr.ipv4.dstAddr;
                 }
             }
 
@@ -496,9 +496,15 @@ control MyIngress (inout headers hdr,
                         bit<8> k_aux;
                         bit<32> src_thresh;
                         R_k.read(k_aux,0);
+                        /*
                         src_thresh = meta.src_ewma + ((bit<32>)k_aux * meta.src_ewmmd >> 3);
                         if((meta.src_entropy << 14) > src_thresh)
                             meta.alarm = 1;
+                            */
+                        src_thresh = meta.src_ewma - ((bit<32>)k_aux * meta.src_ewmmd >> 3);
+                        if((meta.src_entropy <<14) < src_thresh)
+                            meta.alarm = 1;
+
                     }
 
                     if (meta.alarm == 0) {
