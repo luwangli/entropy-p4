@@ -98,7 +98,28 @@
         return temp;
      }
 
-     uint16_t PcapRead::entropyEtherType(const PcapPacket& pcap_packet) const {
+    uint32_t PcapRead::entropySrcEwma(const PcapPacket& pcap_packet) const {
+        if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
+            throw std::runtime_error("could not extract entropy information from packet");
+        const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
+        return ntohl(entropy_header->src_ewma);
+    }
+
+    uint32_t PcapRead::entropySrcEwmmd(const PcapPacket& pcap_packet) const {
+        if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
+            throw std::runtime_error("could not extract entropy information from packet");
+        const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
+        return ntohl(entropy_header->src_ewmmd);
+    }
+
+    uint8_t PcapRead::entropyAlarm(const PcapPacket& pcap_packet) const {
+        if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
+            throw std::runtime_error("could not extract entropy information from packet");
+        const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());
+        return entropy_header->alarm;
+    }
+
+    uint16_t PcapRead::entropyEtherType(const PcapPacket& pcap_packet) const {
         if(l2EtherType(pcap_packet) != TYPE_ENTROPY)
             throw std::runtime_error("could not extract entropy information from packet");
         const struct entropy_t* entropy_header = reinterpret_cast<const struct entropy_t*>(pcap_packet.data + l2HeaderLength());

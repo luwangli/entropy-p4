@@ -11,9 +11,9 @@ def Get_IP(pcap_file):
     for pkt in packets:
 #        print pkt[IP].fields['src']
         if pkt.haslayer(IP) == 1:
-            print pkt[IP].fields['src']
-            ips.append(pkt[IP].fields['src'])
-    #        print ips
+ #           print pkt[IP].fields['src']
+            ips.append(pkt[IP].fields['dst'])
+ #focus on dst ip
     return ips
 
 
@@ -30,7 +30,7 @@ def Entropy2(labels, base=2):
 
 if __name__ == "__main__":
  #   ips = Get_IP("result/skew-1.0.pcap")
-    ips = Get_IP("../data/s3.2.pcap")
+    ips = Get_IP("../data/160000_0.05.pcap")
     real_entropy = []
 
     ips_count = np.size(ips)
@@ -39,10 +39,12 @@ if __name__ == "__main__":
     # note keeping the same with "sw_rules/s11-cli.input register R_log2_m"
     windows_size = int(math.pow(2,13))
     windows_count = ips_count / windows_size
+    print windows_count
+
     for i in range(int(windows_count)):
         temp_e = Entropy(ips[i*windows_size:(i+1)*windows_size])
-        print temp_e
+ #       print temp_e
         real_entropy.append(temp_e)
     print real_entropy
     data = pd.DataFrame({'entropy':real_entropy},index=None)
- #   data.to_csv('result/ddostrace.csv',index=False)
+    data.to_csv('result/160000_0.5_dst.csv',index=False)

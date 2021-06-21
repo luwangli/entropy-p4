@@ -28,6 +28,41 @@ def bin2dec(b):
     return d
 
 
-data = 116
-result = data_convert(data)
-print result
+data = 203
+Data = [203
+        ,189]
+Data = [109,
+111,
+108,
+106,
+104,
+109,
+109,
+108,
+105,
+104,
+106,
+109,
+108,
+106,
+108,
+108,
+107,
+109,
+111,
+110,
+114,
+108,
+107,
+112,
+111,
+110,
+107,
+112,
+108
+]
+for data in Data:
+    result = data_convert(data)
+    print result
+#result = data_convert(data)
+#print result

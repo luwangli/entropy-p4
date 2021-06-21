@@ -1,4 +1,4 @@
 #!/bin/sh
-#make clean
+make clean
 make Makefile
-#./run.exe ../pcaps/s11-eth3_in.pcap
+./run.exe ../pcaps/s11-eth3_in.pcap

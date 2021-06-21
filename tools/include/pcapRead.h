@@ -8,6 +8,9 @@
     struct entropy_t {
         uint32_t pkt_num;
         uint32_t src_entropy;
+        uint32_t src_ewma;
+        uint32_t src_ewmmd;
+        uint8_t alarm;
         uint16_t etherType;
     };
 
@@ -30,6 +33,9 @@
 
             uint32_t entropyPktNum(const PcapPacket& pcap_packet) const;
             uint32_t entropySrcEntropy(const PcapPacket& pcap_packet) const;
+            uint32_t entropySrcEwma(const PcapPacket& pcap_packet) const;
+            uint32_t entropySrcEwmmd(const PcapPacket& pcap_packet) const;
+            uint8_t entropyAlarm(const PcapPacket& pcap_packet) const;
             uint16_t entropyEtherType(const PcapPacket& pcap_packet) const;
 
         private:

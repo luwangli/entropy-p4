@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     boost::program_options::notify(variables_map);
 
-    std::ofstream output_file("result/p4_estimate_entropy.csv");
+    std::ofstream output_file("result/p4_0.03.csv");
     if(!output_file) {
         std::cout<<"Uable open file: result/p4_estimate_entropy.csv"<<std::endl;
         exit(1);
@@ -47,12 +47,18 @@ int main(int argc, char* argv[]) {
         PcapRead pcap_read(pcap_filename);
         PcapPacket pcap_packet;
         while (pcap_read.nextPacket(pcap_packet) > 0) {
-            std::cout<< 1000000*pcap_packet.metadata->ts.tv_sec + pcap_packet.metadata->ts.tv_usec<<" ";
+            std::cout<< "time: "<<1000000*pcap_packet.metadata->ts.tv_sec + pcap_packet.metadata->ts.tv_usec<<" ";
+            std::cout<< "entropy :"<<pcap_read.entropySrcEntropy(pcap_packet)<<" ";
+            std::cout<< "ewma: "<<pcap_read.entropySrcEwma(pcap_packet)<<" ";
+            std::cout<< "ewmmd: "<<pcap_read.entropySrcEwmmd(pcap_packet)<<" ";
+            std::cout<< "alarm: "<<static_cast<uint16_t> (pcap_read.entropyAlarm(pcap_packet))<<std::endl;
+     //       std::cout<< pcap_read.entropySrcEntropy(pcap_packet)<<" ";
+
 //            std::cout<<pcap_read.entropySrcEntropy(pcap_packet)<<std::endl;
 //            std::cout<<pcap_read.entropyEtherType(pcap_packet)<< std::endl;
  //           pcap_read.entropySrcEntropy(pcap_packet);
-            pcap_read.entropyPktNum(pcap_packet);
-            output_file<<pcap_read.entropySrcEntropy(pcap_packet)<<std::endl;
+         //   pcap_read.entropyPktNum(pcap_packet);
+            output_file<<pcap_read.entropySrcEntropy(pcap_packet)<<","<<static_cast<uint16_t> (pcap_read.entropyAlarm(pcap_packet))<<std::endl;
         }
     } catch (std::exception& e) {
         std::cerr << "Error: "<< e.what() <<std::endl;
