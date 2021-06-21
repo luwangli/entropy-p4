@@ -512,6 +512,7 @@ control MyIngress (inout headers hdr,
                         R_alpha.read(alpha_aux, 0);
 
                         meta.src_ewma = (((bit<32>)alpha_aux * meta.src_entropy) << 6) + (((0x0000100 - (bit<32>)alpha_aux) * meta.src_ewma) >> 8);
+                     //   meta.src_ewma = (bit<32>)alpha_aux * meta.src_entropy;
                         if ((meta.src_entropy << 14) >= meta.src_ewma)
                            meta.src_ewmmd = (((bit<32>)alpha_aux*((meta.src_entropy << 14) - meta.src_ewma)) >> 8) + (((0x00000100 - (bit<32>)alpha_aux)*meta.src_ewmmd) >> 8);
                         else
@@ -546,6 +547,9 @@ control MyEgress (inout headers hdr,
             hdr.entropy.setValid();
             hdr.entropy.pkt_num = meta.pkt_num;
             hdr.entropy.src_entropy = meta.src_entropy;
+            hdr.entropy.src_ewma = meta.src_ewma;
+            hdr.entropy.src_ewmmd = meta.src_ewmmd;
+            hdr.entropy.alarm = meta.alarm;
             hdr.entropy.etherType = hdr.ethernet.etherType;
          //   hdr.entropy.etherType = TYPE_ENTROPY;
             hdr.ethernet.etherType = TYPE_ENTROPY;

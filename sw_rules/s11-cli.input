@@ -1,18 +1,15 @@
 mirroring_add 250 3
 
-register_write MyIngress.R_log2_m 0 13
-register_write MyIngress.training_len 0 0
-register_write MyIngress.alpha 0 16
-register_write MyIngress.k 0 30
-register_write MyIngress.k_noattack 0 30
-register_write MyIngress.k_attack 0 16
-register_write MyIngress.device_status 0 0
-register_write MyEgress.features 0 0
+register_write MyIngress.R_log2_m 0 3
+register_write MyIngress.R_training_len 0 2
+register_write MyIngress.R_alpha 0 16
+register_write MyIngress.R_k 0 30
+
 
 table_clear MyIngress.src_entropy_term
 table_add MyIngress.src_entropy_term MyIngress.get_entropy_term 0/31 => 0
 table_add MyIngress.src_entropy_term MyIngress.get_entropy_term 2/32 => 32
-table_add MyIngress.src_entropy_term MyIngress.get_entropy_term 3/32 => 44
+table_add MyIngress.src_entropy_term MyIngress.get_entropy_term  3/32 => 44
 table_add MyIngress.src_entropy_term MyIngress.get_entropy_term 4/32 => 52
 table_add MyIngress.src_entropy_term MyIngress.get_entropy_term 5/32 => 58
 table_add MyIngress.src_entropy_term MyIngress.get_entropy_term 6/32 => 62
